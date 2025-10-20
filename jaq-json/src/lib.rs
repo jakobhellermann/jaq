@@ -50,6 +50,9 @@ pub use alloc::rc::Rc;
 #[cfg(feature = "sync")]
 pub use alloc::sync::Arc as Rc;
 
+#[cfg(feature = "serde")]
+mod serde;
+
 /// JSON superset with binary data and non-string object keys.
 ///
 /// This is the default value type for jaq.
@@ -726,10 +729,10 @@ impl fmt::Display for Val {
     }
 }
 
-#[cfg(feature = "formats")]
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
+/// Type alias for a type-erased Error
+pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
-#[cfg(feature = "formats")]
-fn invalid_data(e: impl Into<BoxError>) -> std::io::Error {
+/// Helper function for creating a [std::io::Error] from an arbitrary error
+pub fn invalid_data(e: impl Into<BoxError>) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, e)
 }

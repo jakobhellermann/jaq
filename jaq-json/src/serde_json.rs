@@ -18,12 +18,26 @@ impl From<serde_json::Value> for Val {
 }
 
 /// Serialisation error.
+#[derive(Debug)]
 pub enum SError {
     /// Number could not be parsed (likely out of bounds)
     Num(Num),
     /// Non-string key in object
     Key(Val),
 }
+
+impl std::fmt::Display for SError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Num(num) => {
+                write!(f, "number '{num}' could not be parsed")
+            }
+            Self::Key(key) => write!(f, "found non-string key '{key}' in object"),
+        }
+    }
+}
+
+impl std::error::Error for SError {}
 
 fn from_key(k: &Val) -> Result<&[u8], SError> {
     k.as_utf8_bytes().ok_or_else(|| SError::Key(k.clone()))
