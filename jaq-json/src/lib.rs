@@ -10,7 +10,6 @@
 extern crate alloc;
 extern crate std;
 
-#[cfg(feature = "formats")]
 mod formats;
 mod funs;
 mod num;
@@ -43,7 +42,6 @@ use num_bigint::BigInt;
 use num_traits::{cast::ToPrimitive, Signed};
 
 pub use funs::base_funs;
-#[cfg(feature = "formats")]
 pub use funs::funs;
 pub use num::Num;
 

@@ -1,5 +1,4 @@
 use crate::funs::bome;
-use crate::{cbor, json, toml, xml, yaml};
 use crate::{Error, Val, ValR, ValX};
 use alloc::{boxed::Box, string::ToString, vec::Vec};
 use bytes::Bytes;
@@ -7,6 +6,17 @@ use core::fmt;
 use jaq_core::box_iter::{box_once, then, BoxIter};
 use jaq_core::{DataT, Exn, RunPtr};
 use jaq_std::{v, Filter, ValT as _};
+
+#[cfg(feature = "cbor")]
+use crate::cbor;
+#[cfg(feature = "json")]
+use crate::json;
+#[cfg(feature = "toml")]
+use crate::toml;
+#[cfg(feature = "xml")]
+use crate::xml;
+#[cfg(feature = "yaml")]
+use crate::yaml;
 
 impl Val {
     fn as_bytes_owned(&self) -> Option<Bytes> {
@@ -75,49 +85,58 @@ fn parse_bytes(b: Bytes, parse: impl FnOnce(&[u8]) -> ValRs) -> ValRs<'static> {
 
 pub fn funs<D: for<'a> DataT<V<'a> = Val>>() -> Box<[Filter<RunPtr<D>>]> {
     Box::new([
+        #[cfg(feature = "json")]
         ("fromjson", v(0), |cv| {
             bmme(then(cv.1.try_as_utf8_bytes_owned(), |s| {
                 let fail = move |r: Result<_, _>| r.map_err(|e| parse_fail(&cv.1, "JSON", e));
                 parse_bytes(s, |s| Box::new(json::parse_many(s).map(fail)))
             }))
         }),
+        #[cfg(feature = "cbor")]
         ("fromcbor", v(0), |cv| {
             bmme(then(cv.1.try_as_bytes_owned(), |s| {
                 let fail = move |r: Result<_, _>| r.map_err(|e| parse_fail(&cv.1, "CBOR", e));
                 parse_bytes(s, |s| Box::new(cbor::parse_many(s).map(fail)))
             }))
         }),
+        #[cfg(feature = "yaml")]
         ("fromyaml", v(0), |cv| {
             bmme(then(cv.1.try_as_utf8_bytes_owned(), |s| {
                 let fail = move |r: Result<_, _>| r.map_err(|e| parse_fail(&cv.1, "YAML", e));
                 parse_byte_str(s, |s| Box::new(yaml::parse_many(s).map(fail)))
             }))
         }),
+        #[cfg(feature = "xml")]
         ("fromxml", v(0), |cv| {
             bmme(then(cv.1.try_as_utf8_bytes_owned(), |s| {
                 let fail = move |r: Result<_, _>| r.map_err(|e| parse_fail(&cv.1, "XML", e));
                 parse_byte_str(s, |s| Box::new(xml::parse_many(s).map(fail)))
             }))
         }),
+        #[cfg(feature = "toml")]
         ("fromtoml", v(0), |cv| {
             let from_utf8 = |b| core::str::from_utf8(b).map_err(Error::str);
             let parse = |b| toml::parse(b).map_err(|e| parse_fail(&cv.1, "TOML", e));
             bome(cv.1.try_as_utf8_bytes().and_then(from_utf8).and_then(parse))
         }),
+        #[cfg(feature = "cbor")]
         ("tocbor", v(0), |cv| {
             let mut buf = Vec::new();
             cbor::write(&mut buf, &cv.1).unwrap();
             bome(Ok(Val::byte_str(buf)))
         }),
+        #[cfg(feature = "yaml")]
         ("toyaml", v(0), |cv| {
             let mut buf = Vec::new();
             yaml::write(&mut buf, &cv.1).unwrap();
             box_once(Ok(Val::utf8_str(buf)))
         }),
+        #[cfg(feature = "toml")]
         ("totoml", v(0), |cv| {
             let ser = toml::Toml::try_from(&cv.1).map_err(|e| serialise_fail(&cv.1, "TOML", e));
             bome(ser.map(|ser| Val::utf8_str(ser.to_string())))
         }),
+        #[cfg(feature = "xml")]
         ("toxml", v(0), |cv| {
             let fail = |e| serialise_fail(&cv.1, "XML", e);
             bome(xml::Xml::try_from(&cv.1).map_err(fail).map(|v| {

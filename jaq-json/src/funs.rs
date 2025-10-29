@@ -113,7 +113,6 @@ pub(crate) fn bome<'a>(r: ValR) -> BoxIter<'a, ValX> {
 }
 
 /// Functions of the standard library.
-#[cfg(feature = "formats")]
 pub fn funs<D: for<'a> DataT<V<'a> = Val>>() -> impl Iterator<Item = Filter<Native<D>>> {
     base_funs().chain(crate::formats::funs().into_vec().into_iter().map(run))
 }
